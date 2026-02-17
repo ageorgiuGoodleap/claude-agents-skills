@@ -1,0 +1,417 @@
+# GraphQL Schema Template
+
+# ============================================
+# Scalar Types
+# ============================================
+
+"""
+ISO 8601 date-time string (e.g., "2025-02-08T10:30:00Z")
+"""
+scalar DateTime
+
+"""
+Email address in valid format
+"""
+scalar Email
+
+"""
+URL in valid format
+"""
+scalar URL
+
+# ============================================
+# Core Types
+# ============================================
+
+"""
+User account
+"""
+type User {
+  """Unique user identifier"""
+  id: ID!
+
+  """User's email address"""
+  email: Email!
+
+  """Whether email has been verified"""
+  emailVerified: Boolean!
+
+  """User's full name"""
+  name: String
+
+  """User profile"""
+  profile: Profile
+
+  """User's role"""
+  role: UserRole!
+
+  """Account creation timestamp"""
+  createdAt: DateTime!
+
+  """Last update timestamp"""
+  updatedAt: DateTime!
+}
+
+"""
+User profile information
+"""
+type Profile {
+  """Unique profile identifier"""
+  id: ID!
+
+  """Associated user ID"""
+  userId: ID!
+
+  """Biography or description"""
+  bio: String
+
+  """Avatar image URL"""
+  avatarUrl: URL
+
+  """Profile creation timestamp"""
+  createdAt: DateTime!
+
+  """Last update timestamp"""
+  updatedAt: DateTime!
+}
+
+# ============================================
+# Enums
+# ============================================
+
+"""
+User role types
+"""
+enum UserRole {
+  """Regular user"""
+  USER
+
+  """Moderator with elevated permissions"""
+  MODERATOR
+
+  """Administrator with full access"""
+  ADMIN
+
+  """Guest user with limited access"""
+  GUEST
+}
+
+"""
+Sort order direction
+"""
+enum SortOrder {
+  ASC
+  DESC
+}
+
+# ============================================
+# Input Types
+# ============================================
+
+"""
+Input for user registration
+"""
+input RegisterInput {
+  """Email address"""
+  email: Email!
+
+  """Password (min 8 characters)"""
+  password: String!
+
+  """Full name (optional)"""
+  name: String
+}
+
+"""
+Input for user login
+"""
+input LoginInput {
+  """Email address"""
+  email: Email!
+
+  """Password"""
+  password: String!
+
+  """Extend session to 30 days"""
+  rememberMe: Boolean
+}
+
+"""
+Input for updating user profile
+"""
+input UpdateProfileInput {
+  """Full name"""
+  name: String
+
+  """Biography"""
+  bio: String
+
+  """Avatar URL"""
+  avatarUrl: URL
+}
+
+"""
+Pagination input
+"""
+input PaginationInput {
+  """Number of items per page (default: 20, max: 100)"""
+  limit: Int = 20
+
+  """Page number (1-indexed)"""
+  page: Int = 1
+}
+
+"""
+User filtering options
+"""
+input UserFilterInput {
+  """Filter by role"""
+  role: UserRole
+
+  """Filter by email verification status"""
+  emailVerified: Boolean
+
+  """Search query (searches name and email)"""
+  search: String
+}
+
+"""
+User sorting options
+"""
+input UserSortInput {
+  """Field to sort by"""
+  field: UserSortField!
+
+  """Sort direction"""
+  order: SortOrder!
+}
+
+"""
+Fields available for user sorting
+"""
+enum UserSortField {
+  CREATED_AT
+  UPDATED_AT
+  EMAIL
+  NAME
+}
+
+# ============================================
+# Response Types
+# ============================================
+
+"""
+Authentication response
+"""
+type AuthResponse {
+  """JWT access token"""
+  token: String!
+
+  """Token expiration timestamp"""
+  expiresAt: DateTime!
+
+  """Authenticated user"""
+  user: User!
+}
+
+"""
+Paginated user list response
+"""
+type UserConnection {
+  """List of users"""
+  nodes: [User!]!
+
+  """Pagination information"""
+  pageInfo: PageInfo!
+
+  """Total number of users matching filter"""
+  totalCount: Int!
+}
+
+"""
+Pagination metadata
+"""
+type PageInfo {
+  """Current page number"""
+  page: Int!
+
+  """Items per page"""
+  limit: Int!
+
+  """Total number of items"""
+  totalCount: Int!
+
+  """Total number of pages"""
+  totalPages: Int!
+
+  """Whether there is a next page"""
+  hasNextPage: Boolean!
+
+  """Whether there is a previous page"""
+  hasPreviousPage: Boolean!
+}
+
+"""
+Success response for mutations without data
+"""
+type SuccessResponse {
+  """Success message"""
+  message: String!
+
+  """Operation successful"""
+  success: Boolean!
+}
+
+# ============================================
+# Error Types
+# ============================================
+
+"""
+Error response
+"""
+type Error {
+  """Error code"""
+  code: ErrorCode!
+
+  """Human-readable error message"""
+  message: String!
+
+  """Additional error details"""
+  details: [FieldError!]
+}
+
+"""
+Field-specific validation error
+"""
+type FieldError {
+  """Field name"""
+  field: String!
+
+  """Error message for this field"""
+  message: String!
+
+  """Error code for this field"""
+  code: String
+}
+
+"""
+Error code types
+"""
+enum ErrorCode {
+  VALIDATION_ERROR
+  AUTHENTICATION_ERROR
+  AUTHORIZATION_ERROR
+  NOT_FOUND
+  CONFLICT
+  RATE_LIMIT_EXCEEDED
+  INTERNAL_ERROR
+}
+
+# ============================================
+# Union Types
+# ============================================
+
+"""
+Result of registration mutation
+"""
+union RegisterResult = AuthResponse | Error
+
+"""
+Result of login mutation
+"""
+union LoginResult = AuthResponse | Error
+
+"""
+Result of profile update mutation
+"""
+union UpdateProfileResult = Profile | Error
+
+# ============================================
+# Queries
+# ============================================
+
+type Query {
+  """
+  Get currently authenticated user
+  Requires authentication
+  """
+  me: User!
+
+  """
+  Get user by ID
+  Requires authentication
+  """
+  user(id: ID!): User
+
+  """
+  List users with filtering, sorting, and pagination
+  Requires authentication
+  """
+  users(
+    filter: UserFilterInput
+    sort: UserSortInput
+    pagination: PaginationInput
+  ): UserConnection!
+
+  """
+  Get user profile by user ID
+  Requires authentication
+  """
+  profile(userId: ID!): Profile
+}
+
+# ============================================
+# Mutations
+# ============================================
+
+type Mutation {
+  """
+  Register a new user account
+  Public endpoint (no authentication required)
+  """
+  register(input: RegisterInput!): RegisterResult!
+
+  """
+  Login with credentials
+  Public endpoint (no authentication required)
+  """
+  login(input: LoginInput!): LoginResult!
+
+  """
+  Logout and invalidate current session
+  Requires authentication
+  """
+  logout: SuccessResponse!
+
+  """
+  Update user profile
+  Requires authentication
+  User can only update their own profile
+  """
+  updateProfile(input: UpdateProfileInput!): UpdateProfileResult!
+
+  """
+  Delete user account
+  Requires authentication
+  User can only delete their own account
+  """
+  deleteAccount: SuccessResponse!
+}
+
+# ============================================
+# Subscriptions
+# ============================================
+
+type Subscription {
+  """
+  Subscribe to profile updates for a user
+  Requires authentication
+  """
+  profileUpdated(userId: ID!): Profile!
+
+  """
+  Subscribe to new user registrations
+  Requires admin role
+  """
+  userRegistered: User!
+}
